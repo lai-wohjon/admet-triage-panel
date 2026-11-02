@@ -128,7 +128,14 @@ You get a table (one row per input) and a gallery of the drawn structures.
 | 🟡 | `UNCERTAIN` | Probability between 0.40 and 0.60: the model is close to a coin flip |
 | ⚪ | `OUT OF DOMAIN` | Similarity to the nearest training molecule is below 0.30. **Ignore the probability shown**; the model has not seen anything like this |
 
-The `OUT OF DOMAIN` check takes priority over the others.
+**There is no "moderate risk" category.** The middle zone is called `UNCERTAIN`. A molecule the app refuses to score (`status` = `rejected`) gets no verdict at all, only a reason in `notes`.
+
+**Order of checks (the first one that applies wins):**
+
+1. **Is the input acceptable?** If not, it is rejected.
+2. **Is the molecule similar enough to the training data?** If the closest training molecule is below 0.30 similar, the answer is `OUT OF DOMAIN`. This is checked separately for each endpoint, because each has its own training set, so one molecule can be out of domain for hERG yet still get an Ames answer.
+3. **Is `p` strictly between 0.40 and 0.60?** Then `UNCERTAIN`.
+4. **Otherwise:** `p` of 0.60 or more gives `HIGH RISK` (or `BBB+`), and `p` of 0.40 or less gives `LOW RISK` (or `BBB-`).
 
 ### Worked examples
 
@@ -138,9 +145,10 @@ These come from the released models (v1.0), so you can check your install agains
 |---|---|---|---|
 | Terfenadine `CC(C)(C)c1ccc(cc1)C(O)CCCN1CCC(CC1)C(O)(c1ccccc1)c1ccccc1` | 🔴 HIGH RISK (p=0.96) | 🟢 LOW RISK (p=0.09) | 🟤 BBB- (p=0.21) |
 | Benzo[a]pyrene `c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34` | ⚪ OUT OF DOMAIN | 🔴 HIGH RISK (p=1.00) | ⚪ OUT OF DOMAIN |
+| Fexofenadine `CC(C)(C(=O)O)c1ccc(cc1)C(O)CCCN1CCC(CC1)C(O)(c1ccccc1)c1ccccc1` | 🟡 UNCERTAIN (p=0.51) | 🟢 LOW RISK (p=0.09) | 🟤 BBB- (p=0.11) |
 | Aspirin `CC(=O)Oc1ccccc1C(=O)O` | 🟢 LOW RISK (p=0.01), sim 0.31 | 🟢 LOW RISK (p=0.01), in Ames training set | 🟡 UNCERTAIN (p=0.51) |
 
-How to read them: terfenadine is the textbook hERG blocker, a lipophilic basic amine, and is flagged. Benzo[a]pyrene is a classic mutagen and is flagged for Ames, while the hERG and BBB columns correctly refuse to answer because it is a flat, fully aromatic hydrocarbon unlike anything in those training sets. Aspirin's hERG similarity of 0.31 is only just above the 0.30 cutoff, a reminder that "in domain" is a threshold, not a guarantee.
+How to read them: terfenadine is the textbook hERG blocker, a lipophilic basic amine, and is flagged. Fexofenadine, terfenadine's safer acid cousin, comes out `UNCERTAIN` instead of a confident answer either way. Benzo[a]pyrene is a classic mutagen and is flagged for Ames, while the hERG and BBB columns correctly refuse to answer because it is a flat, fully aromatic hydrocarbon unlike anything in those training sets. Aspirin's hERG similarity of 0.31 is only just above the 0.30 cutoff, a reminder that "in domain" is a threshold, not a guarantee.
 
 ### Rejected input
 
@@ -220,7 +228,7 @@ Read these honestly:
 - **It can be confidently wrong inside its domain**, for example on some polycyclic aromatics for Ames.
 - **Scope is narrow**: drug-like organic molecules from public datasets whose labels contain noise. It predicts from 2D structure alone: no 3D conformation, protonation state, metabolism or dose.
 
-The tables behind these numbers are in the repository: `benchmark_summary.csv`, `benchmark_ci.csv`, `benchmark_deployed_vs_baselines.csv`, `safety_metrics.csv`, `error_analysis_log.csv` (the worst false positives and negatives) and `library_screen.csv` (16 well-known drugs, with a flag for which ones the model had already seen in training).
+The tables behind these numbers are in the repository: `benchmark_summary.csv`, `benchmark_ci.csv`, `benchmark_deployed_vs_baselines.csv`, `safety_metrics.csv`, `edge_case_tests.csv` (14 of 14 input edge cases pass), `error_analysis_log.csv` (the worst false positives and negatives) and `library_screen.csv` (16 well-known drugs, with a flag for which ones the model had already seen in training).
 
 ---
 
@@ -236,6 +244,8 @@ The tables behind these numbers are in the repository: `benchmark_summary.csv`, 
 | `requirements.txt` | Pinned packages needed to run the app |
 | `requirements-train.txt` | Extra packages needed to re-run the notebook |
 | `benchmark_*.csv`, `safety_metrics.csv`, `edge_case_tests.csv`, `error_analysis_log.csv`, `library_screen.csv` | Result tables written by the notebook |
+
+**Two versions of the notebook exist.** The one in this repository is a cleaned-up copy: its package-install and file-writing cells were replaced by a step that clones this repository, and one sentence in section 11.3 was corrected. The original, as submitted, also wrote `admet_core.py`, `app.py` and `requirements.txt` itself and installed the newest packages; the team keeps it as the process record. `admet_core.py` here is identical to what the original notebook writes. `app.py` differs only by the model-download block.
 
 Not in the repository (listed in `.gitignore`): `admet_bundle.joblib` (the trained models; see below) and `data/` (the datasets and feature cache, which the notebook downloads and generates).
 
@@ -255,7 +265,7 @@ All random seeds are fixed, though tiny (2nd to 3rd decimal) run-to-run differen
 ## Model file and hosting
 
 - **Why the models are not in git:** `admet_bundle.joblib` is about 87 MB, so it is attached to the [V1.0 release](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0) instead of the repository history. `app.py` downloads it on first start and checks its SHA-256 before loading.
-- **Security note:** the bundle is a Python pickle, and loading a pickle can execute code. Only load bundles you trained yourself or downloaded from this repository's releases. The hash check enforces the second case for the automatic download.
+- **Security note:** the bundle is a Python pickle, and loading a pickle can execute code. Only load bundles you trained yourself or downloaded from this repository's releases. The hash check enforces the second case for the automatic download. A bundle file already sitting next to `app.py` is loaded **without** a hash check, so only put files there that you trust.
 - **Version note:** the bundle was trained with scikit-learn 1.8.0 and RDKit 2026.9.1, which `requirements.txt` pins. Other scikit-learn versions load it with an `InconsistentVersionWarning` and may behave differently. RDKit is pinned because the 217 descriptors come from its descriptor list, and a different RDKit version can change that list so the features no longer match what the model was trained on.
 - **Hugging Face Space (optional):** the settings block at the very top of this file (shown as a small table on GitHub) configures this repository to run as a Gradio Space, if you create one and push the repository to it. This has not been tested on Hugging Face itself.
 
