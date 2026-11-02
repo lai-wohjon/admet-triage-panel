@@ -1,0 +1,8 @@
+# Runtime for the Gradio app (also used by the Hugging Face Space and Launch_App.ipynb).
+# scikit-learn is pinned to the version that trained admet_bundle.joblib (1.8.0); other versions load it with a warning.
+scikit-learn==1.8.0
+rdkit==2026.9.1
+gradio==6.31.0
+pandas
+numpy
+joblib

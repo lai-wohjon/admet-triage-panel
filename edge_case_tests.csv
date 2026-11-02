@@ -1,0 +1,15 @@
+case,expected,got,pass,message
+empty string,rejected,rejected,PASS,Empty input.
+None,rejected,rejected,PASS,Empty input.
+gibberish,rejected,rejected,PASS,Could not parse SMILES.
+unbalanced ring,rejected,rejected,PASS,Could not parse SMILES.
+water,rejected,rejected,PASS,Inorganic / no carbon: outside the scope of this model.
+methane (too small),rejected,rejected,PASS,Too small (1 heavy atoms; minimum 3).
+table salt (inorganic),rejected,rejected,PASS,Inorganic / no carbon: outside the scope of this model.
+cisplatin (metal),rejected,rejected,PASS,Inorganic / no carbon: outside the scope of this model.
+giant polymer chain,rejected,rejected,PASS,Too large (200 heavy atoms; maximum 150).
+aspirin sodium salt,ok,ok,PASS,Multi-component input (salt/mixture): largest fragment used.
+"aspirin, messy whitespace",ok,ok,PASS,
+"aspirin, non-canonical SMILES",ok,ok,PASS,
+quaternary ammonium,ok,ok,PASS,Molecule carries a permanent charge (e.g. quaternary ammonium).
+drug-like normal case,ok,ok,PASS,

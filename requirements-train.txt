@@ -1,0 +1,8 @@
+# Extra packages for re-running TrackB_ADMET_Hackathon.ipynb (install on top of requirements.txt)
+-r requirements.txt
+lightgbm
+shap
+torch
+matplotlib
+seaborn
+requests

@@ -1,0 +1,4 @@
+endpoint,n_test,best advanced,AUC,95% CI,best baseline,gain vs baseline,gain 95% CI
+hERG,62,Ensemble,0.8984088127294982,"[0.795, 0.977]",Logistic regression,-0.006930780785924355,"[-0.066, 0.043]"
+AMES,726,Ensemble,0.8926676517651382,"[0.869, 0.915]",kNN-Tanimoto,0.04793119144164032,"[0.027, 0.070]"
+BBB,196,Random Forest,0.9172921265636498,"[0.865, 0.960]",kNN-Tanimoto,0.08167637288010338,"[0.030, 0.144]"

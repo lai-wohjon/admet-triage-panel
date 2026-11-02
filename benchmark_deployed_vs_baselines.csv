@@ -1,0 +1,4 @@
+endpoint,deployed model,test AUC,gain vs Logistic regression,95% CI vs Logistic regression,gain vs kNN-Tanimoto,95% CI vs kNN-Tanimoto
+hERG,Random Forest,0.9094247246022032,0.004283965728274275,"[-0.054, +0.057]",0.08078335373317025,"[-0.049, +0.223]"
+AMES,Random Forest,0.8860297213906733,0.03146700558137394,"[+0.013, +0.050]",0.04122483979389502,"[+0.019, +0.064]"
+BBB,Random Forest,0.9172921265636498,0.04341427520235486,"[-0.006, +0.090]",0.08123620309050772,"[+0.029, +0.142]"
