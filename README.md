@@ -17,6 +17,12 @@ Note: Some of the code and the organization of some of these information is done
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lai-wohjon/admet-triage-panel/blob/main/Launch_App.ipynb)
 
+> **New here? (judges, reviewers, general public)** This is a hackathon project (Track B, Cheminformatics and Early Drug Discovery) built by a student team at the National University of Singapore. It predicts, from a molecule's structure alone, three early drug-safety risks, and it is designed to say "I don't know" rather than guess.
+> - **Try it in two clicks, no install:** the Colab badge above. Details in [Quick start](#quick-start).
+> - **Read how it was built and tested:** [How it works](#how-it-works) and [Results and limitations](#results-and-limitations).
+> - **Check the evidence:** [Sources of truth](#sources-of-truth) lists the raw data, the model file with its checksum, and the result tables.
+> - **If you are keen to find out more, please contact [laiwohjon@gmail.com](mailto:laiwohjon@gmail.com).**
+
 A small web app that takes molecules as SMILES strings and flags three ADMET liabilities that commonly kill drug candidates late: **hERG channel block** (cardiac risk), **Ames mutagenicity** (genotoxicity) and **blood-brain-barrier (BBB) penetration** (CNS exposure). Every answer comes with a calibrated probability and a traffic-light verdict, and the app says **"I don't know"** for molecules that look unlike the data it learned from.
 
 > **Research prototype. `LOW RISK` means "no alarm was raised", not "safe". Not for clinical decisions.** It is a triage tool for ranking and prioritising compounds, not a replacement for the assay.
