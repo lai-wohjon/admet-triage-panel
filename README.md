@@ -17,7 +17,7 @@ Note: Some of the code and the organization of some of these information is done
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lai-wohjon/admet-triage-panel/blob/main/Launch_App.ipynb)
 
-> **New here? (judges, reviewers, general public)** This is a hackathon project (Track B, Cheminformatics and Early Drug Discovery) built by a student team at the National University of Singapore. It predicts, from a molecule's structure alone, three early drug-safety risks, and it is designed to say "I don't know" rather than guess.
+> **New here? (judges, reviewers, general public)** This is a hackathon project (Track B, Cheminformatics and Early Drug Discovery) built by AUA Group 3 for the AUA Joint Lecture Series, Faculty of Pharmacy UI 2026, organised by the Faculty of Pharmacy, Universitas Indonesia. It predicts, from a molecule's structure alone, three early drug-safety risks, and it is designed to say "I don't know" rather than guess.
 > - **Try it in two clicks, no install:** the Colab badge above. Details in [Quick start](#quick-start).
 > - **Read how it was built and tested:** [How it works](#how-it-works) and [Results and limitations](#results-and-limitations).
 > - **Check the evidence:** [Sources of truth](#sources-of-truth) lists the raw data, the model file with its checksum, and the result tables.
