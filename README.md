@@ -31,9 +31,9 @@ Each endpoint is a separate binary classifier trained on a public [Therapeutics 
 
 | Endpoint | Label 1 means | Why it matters | Chemistry behind it |
 |---|---|---|---|
-| **hERG** | Blocks the hERG potassium channel | Blocking it prolongs the QT interval and can cause fatal arrhythmia (terfenadine and cisapride were withdrawn for this) | Lipophilic, basic amines with aromatic rings are the classic hERG pharmacophore. In the notebook's SHAP analysis the model leans on lipophilicity (MolLogP) and molecular size |
-| **AMES** | Mutagenic in the Ames test | Genotoxic compounds are usually stopped immediately | Structural alerts: aromatic nitro and amine groups, polycyclic aromatics, which are what ECFP substructure counts can express |
-| **BBB** | Crosses the blood-brain barrier | Wanted for CNS drugs, unwanted for everything else | Polar surface area (TPSA), heteroatom count and H-bond donors, the usual CNS rules of thumb. The notebook's SHAP analysis shows exactly these features dominating |
+| **[hERG](https://en.wikipedia.org/wiki/HERG)** | Blocks the hERG potassium channel | Blocking it prolongs the [QT interval](https://en.wikipedia.org/wiki/Long_QT_syndrome) and can cause fatal arrhythmia ([terfenadine](https://en.wikipedia.org/wiki/Terfenadine) and [cisapride](https://en.wikipedia.org/wiki/Cisapride) were withdrawn for this). Regulators screen for it under [ICH S7B](https://www.ich.org/page/safety-guidelines) | Lipophilic, basic amines with aromatic rings are the classic hERG pharmacophore. In the notebook's SHAP analysis the model leans on lipophilicity (MolLogP) and molecular size |
+| **AMES** | Mutagenic in the [Ames test](https://en.wikipedia.org/wiki/Ames_test) | Genotoxic compounds are usually stopped immediately (impurity limits follow [ICH M7](https://www.ich.org/page/multidisciplinary-guidelines)) | Structural alerts: aromatic nitro and amine groups, polycyclic aromatics, which are what ECFP substructure counts can express |
+| **BBB** | Crosses the [blood-brain barrier](https://en.wikipedia.org/wiki/Blood%E2%80%93brain_barrier) | Wanted for CNS drugs, unwanted for everything else | [Polar surface area](https://en.wikipedia.org/wiki/Polar_surface_area) (TPSA; [Ertl et al. 2000](https://pubmed.ncbi.nlm.nih.gov/?term=Fast+calculation+of+molecular+polar+surface+area+as+a+sum+of+fragment-based+contributions+and+its+application+to+the+prediction+of+drug+transport+properties)), heteroatom count and H-bond donors, the usual CNS rules of thumb. The notebook's SHAP analysis shows exactly these features dominating |
 
 Dataset sizes after cleaning: hERG 607 molecules, Ames 7,255, BBB 1,955. hERG is small, so its numbers carry much more uncertainty than the other two (see [Results and limitations](#results-and-limitations)).
 
@@ -102,9 +102,9 @@ On Windows, if `python` is not found, try `py -3.12` instead. If PowerShell refu
 
 ### Input
 
-Type or paste **one SMILES per line** into the box (maximum 50 molecules per run, 500 characters each) and press **Predict**. Three example sets are provided under the box; click one to fill it in.
+Type or paste **one [SMILES](https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system) per line** into the box (maximum 50 molecules per run, 500 characters each) and press **Predict**. Three example sets are provided under the box; click one to fill it in.
 
-Where to get SMILES: the "Canonical SMILES" field on a PubChem compound page, "Copy as SMILES" in ChemDraw or MarvinSketch, or `Chem.MolToSmiles(mol)` in RDKit. Salts and mixtures are accepted: the largest fragment is used and a note tells you so.
+Where to get SMILES: the "Canonical SMILES" field on a [PubChem](https://pubchem.ncbi.nlm.nih.gov/) compound page, "Copy as SMILES" in ChemDraw or MarvinSketch, or `Chem.MolToSmiles(mol)` in RDKit. Salts and mixtures are accepted: the largest fragment is used and a note tells you so.
 
 ### Reading the results
 
@@ -143,9 +143,9 @@ These come from the released models (v1.0), so you can check your install agains
 
 | Molecule (SMILES) | hERG | Ames | BBB |
 |---|---|---|---|
-| Terfenadine `CC(C)(C)c1ccc(cc1)C(O)CCCN1CCC(CC1)C(O)(c1ccccc1)c1ccccc1` | 🔴 HIGH RISK (p=0.96) | 🟢 LOW RISK (p=0.09) | 🟤 BBB- (p=0.21) |
-| Benzo[a]pyrene `c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34` | ⚪ OUT OF DOMAIN | 🔴 HIGH RISK (p=1.00) | ⚪ OUT OF DOMAIN |
-| Fexofenadine `CC(C)(C(=O)O)c1ccc(cc1)C(O)CCCN1CCC(CC1)C(O)(c1ccccc1)c1ccccc1` | 🟡 UNCERTAIN (p=0.51) | 🟢 LOW RISK (p=0.09) | 🟤 BBB- (p=0.11) |
+| [Terfenadine](https://en.wikipedia.org/wiki/Terfenadine) `CC(C)(C)c1ccc(cc1)C(O)CCCN1CCC(CC1)C(O)(c1ccccc1)c1ccccc1` | 🔴 HIGH RISK (p=0.96) | 🟢 LOW RISK (p=0.09) | 🟤 BBB- (p=0.21) |
+| [Benzo[a]pyrene](https://en.wikipedia.org/wiki/Benzo%28a%29pyrene) `c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34` | ⚪ OUT OF DOMAIN | 🔴 HIGH RISK (p=1.00) | ⚪ OUT OF DOMAIN |
+| [Fexofenadine](https://en.wikipedia.org/wiki/Fexofenadine) `CC(C)(C(=O)O)c1ccc(cc1)C(O)CCCN1CCC(CC1)C(O)(c1ccccc1)c1ccccc1` | 🟡 UNCERTAIN (p=0.51) | 🟢 LOW RISK (p=0.09) | 🟤 BBB- (p=0.11) |
 | Aspirin `CC(=O)Oc1ccccc1C(=O)O` | 🟢 LOW RISK (p=0.01), sim 0.31 | 🟢 LOW RISK (p=0.01), in Ames training set | 🟡 UNCERTAIN (p=0.51) |
 
 How to read them: terfenadine is the textbook hERG blocker, a lipophilic basic amine, and is flagged. Fexofenadine, terfenadine's safer acid cousin, comes out `UNCERTAIN` instead of a confident answer either way. Benzo[a]pyrene is a classic mutagen and is flagged for Ames, while the hERG and BBB columns correctly refuse to answer because it is a flat, fully aromatic hydrocarbon unlike anything in those training sets. Aspirin's hERG similarity of 0.31 is only just above the 0.30 cutoff, a reminder that "in domain" is a threshold, not a guarantee.
@@ -196,7 +196,7 @@ The **shipped model per endpoint was chosen on validation AUC, never on the test
 
 ### 5. Calibration
 
-Tree ensembles usually do not output well-calibrated probabilities. A **[Platt calibrator](https://doi.org/10.1145/1102351.1102430)** (a logistic regression on the model's logit) is fitted on the **validation set only**, so that "0.8" should mean roughly "80% of molecules scored like this really are positive". It improved Ames (Brier score 0.140 to 0.134), was neutral for BBB, and made hERG slightly worse, because only about 60 hERG molecules were available to fit it. **Treat hERG probabilities as rankings with rough meaning, not as exact risks.**
+Tree ensembles usually do not output well-calibrated probabilities (see the [scikit-learn guide to calibration](https://scikit-learn.org/stable/modules/calibration.html)). A **[Platt calibrator](https://doi.org/10.1145/1102351.1102430)** (a logistic regression on the model's logit) is fitted on the **validation set only**, so that "0.8" should mean roughly "80% of molecules scored like this really are positive". It improved Ames ([Brier score](https://en.wikipedia.org/wiki/Brier_score) 0.140 to 0.134), was neutral for BBB, and made hERG slightly worse, because only about 60 hERG molecules were available to fit it. **Treat hERG probabilities as rankings with rough meaning, not as exact risks.**
 
 ### 6. Guardrails
 
@@ -214,7 +214,7 @@ Both thresholds were fixed in advance, not tuned on the test set.
 
 Held-out scaffold test set, deployed Random Forest:
 
-| Endpoint | Test molecules | ROC-AUC | Gain over logistic regression (95% CI) |
+| Endpoint | Test molecules | [ROC-AUC](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) | Gain over logistic regression (95% CI) |
 |---|---|---|---|
 | hERG | 62 | 0.909 | +0.004 (−0.054 to +0.057): none detectable |
 | Ames | 726 | 0.886 | +0.031 (+0.013 to +0.050): real but modest |
@@ -265,7 +265,7 @@ All random seeds are fixed, though tiny (2nd to 3rd decimal) run-to-run differen
 ## Model file and hosting
 
 - **Why the models are not in git:** `admet_bundle.joblib` is about 87 MB, so it is attached to the [V1.0 release](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0) instead of the repository history. `app.py` downloads it on first start and checks its SHA-256 before loading.
-- **Security note:** the bundle is a Python pickle, and loading a pickle can execute code. Only load bundles you trained yourself or downloaded from this repository's releases. The hash check enforces the second case for the automatic download. A bundle file already sitting next to `app.py` is loaded **without** a hash check, so only put files there that you trust.
+- **Security note:** the bundle is a Python [pickle](https://docs.python.org/3/library/pickle.html), and loading a pickle can execute code. Only load bundles you trained yourself or downloaded from this repository's releases. The hash check enforces the second case for the automatic download. A bundle file already sitting next to `app.py` is loaded **without** a hash check, so only put files there that you trust.
 - **Version note:** the bundle was trained with scikit-learn 1.8.0 and RDKit 2026.9.1, which `requirements.txt` pins. Other scikit-learn versions load it with an `InconsistentVersionWarning` and may behave differently. RDKit is pinned because the 217 descriptors come from its descriptor list, and a different RDKit version can change that list so the features no longer match what the model was trained on.
 - **Hugging Face Space (optional):** the settings block at the very top of this file (shown as a small table on GitHub) configures this repository to run as a Gradio Space, if you create one and push the repository to it. This has not been tested on Hugging Face itself.
 
@@ -285,7 +285,7 @@ Everything reported above can be traced to one of these.
 
 The files are copies of the TDC tables on a public Hugging Face mirror (`scikit-fingerprints/TDC_*`), used because TDC's own download server is sometimes unreachable. The mirror holds a few more rows than the official TDC counts (for example 655 against 648 for hERG); cleaning removes duplicates and conflicting labels, leaving 607, 7,255 and 1,955 molecules. The row counts and positive rates in the table are what the notebook prints when it loads the files, so you can check your download against them. The exact download code is the cell that defines `SOURCES` in section 1.1 of the notebook.
 
-**Trained model**: [`admet_bundle.joblib`](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0), SHA-256 `e8de89babea4798ab4361593fc5d14df860873081f091e0dbe1bd4c720552818`.
+**Trained model**: [`admet_bundle.joblib`](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0), [SHA-256](https://en.wikipedia.org/wiki/SHA-2) `e8de89babea4798ab4361593fc5d14df860873081f091e0dbe1bd4c720552818`.
 
 **Every number in Results**: the CSV tables in this repository (`benchmark_summary.csv`, `benchmark_ci.csv`, `benchmark_deployed_vs_baselines.csv`, `benchmark_all_seeds.csv`, `safety_metrics.csv`, `edge_case_tests.csv`, `error_analysis_log.csv`, `library_screen.csv`), written by `TrackB_ADMET_Hackathon.ipynb`.
 
