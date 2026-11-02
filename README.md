@@ -13,6 +13,8 @@ short_description: hERG, Ames and BBB triage with guardrails
 
 # ADMET triage panel (Hackathon Track B)
 
+Note: Some of the code and the organization of some of these information is done with the help of Claude. However, the main ideas are ours. 
+
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lai-wohjon/admet-triage-panel/blob/main/Launch_App.ipynb)
 
 
