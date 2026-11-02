@@ -17,59 +17,250 @@ Note: Some of the code and the organization of some of these information is done
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lai-wohjon/admet-triage-panel/blob/main/Launch_App.ipynb)
 
+A small web app that takes molecules as SMILES strings and flags three ADMET liabilities that commonly kill drug candidates late: **hERG channel block** (cardiac risk), **Ames mutagenicity** (genotoxicity) and **blood-brain-barrier (BBB) penetration** (CNS exposure). Every answer comes with a calibrated probability and a traffic-light verdict, and the app says **"I don't know"** for molecules that look unlike the data it learned from.
 
-Predicts three ADMET liabilities for a candidate molecule, with guardrails:
+> **Research prototype. `LOW RISK` means "no alarm was raised", not "safe". Not for clinical decisions.** It is a triage tool for ranking and prioritising compounds, not a replacement for the assay.
 
-| Endpoint | Meaning of label 1 |
-|---|---|
-| **hERG** | blocks the hERG channel (cardiotoxicity risk) |
-| **AMES** | mutagenic in the Ames test |
-| **BBB** | crosses the blood-brain barrier |
+**Contents:** [What it predicts](#what-it-predicts) · [Quick start](#quick-start) · [Using the app](#using-the-app) · [How it works](#how-it-works) · [Results and limitations](#results-and-limitations) · [Repository layout](#repository-layout) · [Reproduce the training](#reproduce-the-training) · [Model file and hosting](#model-file-and-hosting) · [Data and licences](#data-and-licences)
 
-Every prediction carries a calibrated probability and a verdict: `HIGH RISK` / `LOW RISK` (or `BBB+` / `BBB-`), `UNCERTAIN` (probability 0.40 to 0.60), or `OUT OF DOMAIN` (nearest training molecule has Tanimoto similarity < 0.30). Invalid or unsupported input (empty, unparsable, inorganic, metals, tiny, huge) is rejected with a reason.
+---
 
-> Research prototype. `LOW RISK` means "no alarm was raised", not "safe". Not for clinical decisions.
+## What it predicts
 
-## Run the app
+Each endpoint is a separate binary classifier trained on a public Therapeutics Data Commons (TDC) dataset. "Label 1" is the thing you usually want to avoid, except for BBB, where it depends on your target.
 
-**In Colab (no setup):** click the badge above and run the cells. It clones this repo, installs the pinned packages and prints a public link.
+| Endpoint | Label 1 means | Why it matters | Chemistry behind it |
+|---|---|---|---|
+| **hERG** | Blocks the hERG potassium channel | Blocking it prolongs the QT interval and can cause fatal arrhythmia (terfenadine and cisapride were withdrawn for this) | Lipophilic, basic amines with aromatic rings are the classic hERG pharmacophore. In the notebook's SHAP analysis the model leans on lipophilicity (MolLogP) and molecular size |
+| **AMES** | Mutagenic in the Ames test | Genotoxic compounds are usually stopped immediately | Structural alerts: aromatic nitro and amine groups, polycyclic aromatics, which are what ECFP substructure counts can express |
+| **BBB** | Crosses the blood-brain barrier | Wanted for CNS drugs, unwanted for everything else | Polar surface area (TPSA), heteroatom count and H-bond donors, the usual CNS rules of thumb. The notebook's SHAP analysis shows exactly these features dominating |
 
-**Locally:**
+Dataset sizes after cleaning: hERG 607 molecules, Ames 7,255, BBB 1,955. hERG is small, so its numbers carry much more uncertainty than the other two (see [Results and limitations](#results-and-limitations)).
+
+---
+
+## Quick start
+
+There are two ways to run the app. Colab needs nothing installed. Running locally is better if you want to keep using it.
+
+### Option A: Google Colab (no installation)
+
+1. Click the **Open in Colab** badge at the top of this page. A notebook called `Launch_App.ipynb` opens.
+2. Run the cells **from top to bottom** using the play button on each cell (or Runtime → Run all).
+   - **Block 1** clones this repository and installs the packages. This takes about a minute. If Colab says it needs to restart the session, choose Runtime → Restart session and run Block 1 again.
+   - **Block 2** starts the app. The **first start downloads the trained models (about 87 MB) and checks them**, so it may take a minute with no output.
+3. When Block 2 finishes it prints two links, and the app may also appear inline under the cell. **For the full-size app, click the public link ending in `.gradio.live`.** The `127.0.0.1` link only exists inside Colab's machine and will not open on yours.
+4. The app opens in a new tab. The link works only while the notebook is running and eventually expires. Closing the notebook stops the app.
+
+### Option B: Run it on your own computer
+
+You need **Python 3.12 or 3.13** (the versions this was tested on) and **git**.
+
 ```bash
+# 1. Get the code
 git clone https://github.com/lai-wohjon/admet-triage-panel.git
 cd admet-triage-panel
+
+# 2. Create an isolated environment (recommended, keeps the pinned versions from clashing with your other projects)
+python -m venv .venv
+
+# 3. Activate it
+#    Windows PowerShell:   .venv\Scripts\Activate.ps1
+#    Windows cmd:          .venv\Scripts\activate.bat
+#    macOS / Linux:        source .venv/bin/activate
+
+# 4. Install the pinned packages (a few minutes; RDKit and Gradio are the big ones)
 pip install -r requirements.txt
-python app.py        # open the printed local URL, paste one SMILES per line
+
+# 5. Start the app
+python app.py
 ```
 
-The trained models (`admet_bundle.joblib`, ~87 MB) are **not stored in git**. On first start `app.py` downloads them from the [V1.0 release](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0) and checks the file's SHA-256 before loading it. If you train your own bundle (below), the local file is used and nothing is downloaded.
+On Windows, if `python` is not found, try `py -3.12` instead. If PowerShell refuses to run the activate script, run `Set-ExecutionPolicy -Scope Process Bypass` first, or use the cmd version.
 
-> **Security note.** The bundle is a Python pickle, and loading a pickle can execute code. Only load bundles you trained yourself or downloaded from this repository's releases (the hash check enforces the latter).
+**What you should see, and what to do:**
 
-> **Version note.** The bundle was trained with scikit-learn 1.8.0, which `requirements.txt` pins. Other versions load it with an `InconsistentVersionWarning` and may give different results.
+1. **First run only:** the terminal prints `Downloading model bundle from ...` and then **appears to hang for a minute or more**. It is downloading an 87 MB file and prints no progress. Wait. Later runs skip this step.
+2. Then it prints `* Running on local URL:  http://127.0.0.1:7860`.
+3. **The browser does not open by itself.** Copy that address into your browser, or Ctrl+click it in most terminals. If port 7860 is busy, Gradio picks the next free one, so use whatever address is printed.
+4. Keep the terminal open while you use the app. Press **Ctrl+C** in the terminal to stop it.
+
+### If something goes wrong
+
+| Symptom | Likely cause and fix |
+|---|---|
+| Nothing opens in the browser | Expected. Open the `http://127.0.0.1:...` address printed in the terminal by hand. |
+| Stuck after `Downloading model bundle...` | The first-run download is silent. Give it a couple of minutes. If it errors, download `admet_bundle.joblib` yourself from the [Releases page](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0) and put it **next to `app.py`**. The app then skips the download. |
+| `failed its SHA-256 check` | The download was corrupted or is not the official file. Delete any partial file and run again, or use the manual download above. |
+| `InconsistentVersionWarning` mentioning scikit-learn | The wrong scikit-learn is installed. The models were trained with 1.8.0: `pip install scikit-learn==1.8.0`. |
+| `ModuleNotFoundError` (rdkit, gradio, ...) | The virtual environment is not activated, or step 4 was skipped. Activate it and rerun `pip install -r requirements.txt`. |
+| Colab link opens but shows an error | Re-run Block 2. If the problem remains, restart the Colab session and run Blocks 1 and 2 again. |
+
+---
+
+## Using the app
+
+### Input
+
+Type or paste **one SMILES per line** into the box (maximum 50 molecules per run, 500 characters each) and press **Predict**. Three example sets are provided under the box; click one to fill it in.
+
+Where to get SMILES: the "Canonical SMILES" field on a PubChem compound page, "Copy as SMILES" in ChemDraw or MarvinSketch, or `Chem.MolToSmiles(mol)` in RDKit. Salts and mixtures are accepted: the largest fragment is used and a note tells you so.
+
+### Reading the results
+
+You get a table (one row per input) and a gallery of the drawn structures.
+
+| Column | Meaning |
+|---|---|
+| `status` | `ok`, or `rejected` with the reason in `notes` |
+| `hERG`, `AMES`, `BBB` | Verdict, plus `p=`, the **calibrated probability of label 1** (blocker / mutagenic / crosses the BBB) |
+| `hERG sim`, `AMES sim`, `BBB sim` | Tanimoto similarity (ECFP4) to the **single most similar training molecule** for that endpoint. 1.0 means an identical structure is in the training data |
+| `in training set of` | Endpoints whose training data already contain this exact molecule. Agreement there is memory, not prediction |
+| `notes` | Warnings such as salt stripped, unusual molecular weight, permanent charge |
+
+**Verdicts**
+
+| Icon | Verdict | When |
+|---|---|---|
+| 🔴 | `HIGH RISK` | hERG or Ames probability ≥ 0.60 |
+| 🟢 | `LOW RISK` | hERG or Ames probability ≤ 0.40. Not a safety clearance |
+| 🔵 / 🟤 | `BBB+ (CNS exposure)` / `BBB- (peripherally restricted)` | BBB probability ≥ 0.60 / ≤ 0.40 |
+| 🟡 | `UNCERTAIN` | Probability between 0.40 and 0.60: the model is close to a coin flip |
+| ⚪ | `OUT OF DOMAIN` | Similarity to the nearest training molecule is below 0.30. **Ignore the probability shown**; the model has not seen anything like this |
+
+The `OUT OF DOMAIN` check takes priority over the others.
+
+### Worked examples
+
+These come from the released models (v1.0), so you can check your install against them.
+
+| Molecule (SMILES) | hERG | Ames | BBB |
+|---|---|---|---|
+| Terfenadine `CC(C)(C)c1ccc(cc1)C(O)CCCN1CCC(CC1)C(O)(c1ccccc1)c1ccccc1` | 🔴 HIGH RISK (p=0.96) | 🟢 LOW RISK (p=0.09) | 🟤 BBB- (p=0.21) |
+| Benzo[a]pyrene `c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34` | ⚪ OUT OF DOMAIN | 🔴 HIGH RISK (p=1.00) | ⚪ OUT OF DOMAIN |
+| Aspirin `CC(=O)Oc1ccccc1C(=O)O` | 🟢 LOW RISK (p=0.01), sim 0.31 | 🟢 LOW RISK (p=0.01), in Ames training set | 🟡 UNCERTAIN (p=0.51) |
+
+How to read them: terfenadine is the textbook hERG blocker, a lipophilic basic amine, and is flagged. Benzo[a]pyrene is a classic mutagen and is flagged for Ames, while the hERG and BBB columns correctly refuse to answer because it is a flat, fully aromatic hydrocarbon unlike anything in those training sets. Aspirin's hERG similarity of 0.31 is only just above the 0.30 cutoff, a reminder that "in domain" is a threshold, not a guarantee.
+
+### Rejected input
+
+The app refuses, with a reason, rather than guessing on input it was not built for: empty or unparsable SMILES, molecules with no carbon (water, salts, cisplatin), fewer than 3 or more than 150 heavy atoms, and elements other than H, B, C, N, O, F, Si, P, S, Cl, Se, Br, I. Molecular weights outside 100 to 900 and permanently charged molecules are accepted with a warning in `notes`.
+
+---
+
+## How it works
+
+This section explains what each step does **in this project specifically**. The full code and the evidence for every claim is in `TrackB_ADMET_Hackathon.ipynb`.
+
+### 1. Cleaning
+
+Each SMILES is parsed with RDKit, reduced to its **largest fragment** (strips counter-ions), neutralised, and converted to a canonical SMILES. Duplicates are merged. **If the same structure appears with conflicting labels it is dropped**, because there is no right answer to learn and whichever copy lands in the test set would randomly flatter or punish the model. The same cleaning code (`admet_core.py`) runs at training time and inside the app, so there is no train/serve mismatch.
+
+### 2. Scaffold split (the key evaluation decision)
+
+Medicinal chemists make series of close analogues, so a random split puts siblings in both train and test and the model scores well by remembering a twin. To mimic the real job (scoring chemistry the model has not seen), molecules are grouped by **Bemis-Murcko scaffold** (the ring systems and linkers with side chains stripped) and **whole scaffold groups** go to train, validation or test in an 80/10/10 split. Code asserts that no scaffold appears in two partitions. Acyclic molecules share one empty-scaffold group, which stays together.
+
+A plain deterministic scaffold split (biggest groups to train, singletons to test) produced test sets with badly skewed class balance here, so the split is randomised and the best of 300 shuffles is kept for class balance. In the notebook's own comparison, a random split inflated the Ames ROC-AUC by about 0.06 (0.92 against 0.86). Note that the hERG numbers cannot be told apart between the two splits because its test set is so small.
+
+### 3. Features
+
+Each molecule becomes a vector of **2,432 numbers**:
+
+- **2,048 ECFP4 counts** (Morgan fingerprint, radius 2): how many times each hashed circular substructure occurs. This is what lets the model see things like a basic amine, a nitroaromatic or a fused polycyclic.
+- **167 MACCS keys**: predefined substructure flags.
+- **217 RDKit 2D descriptors**: physicochemical quantities such as logP, TPSA, molecular weight, H-bond donors and acceptors, which are the quantities the BBB and hERG rules of thumb are written in.
+
+### 4. Models: a ladder where each rung must earn its place
+
+| Model | How it is used here | Deployed? |
+|---|---|---|
+| Majority class | Predicts the base rate. Floor (AUC 0.5) | No |
+| **kNN-Tanimoto** | For a query, find the 5 most similar training molecules by ECFP4 Tanimoto similarity and take a similarity-weighted vote of their labels. This is the "similar molecules behave alike" assumption of QSAR in its barest form. It sets the bar a fancier model must clear. | No (baseline) |
+| Logistic regression | Linear model on log-scaled ECFP4 counts, regularisation tuned by scaffold-grouped cross-validation | No (baseline) |
+| **Random Forest** | 500 trees on all 2,432 features. Small, CPU-only and explainable with SHAP | **Yes, all three endpoints** |
+| LightGBM | Gradient boosting, tuned by scaffold-grouped cross-validation | No (compared) |
+| GNN (GINE) | Graph neural network written from scratch in PyTorch: atoms are nodes, bonds are edges, 3 message-passing layers | No (compared) |
+| Ensemble | Combines the predictions of the advanced models (details in the notebook) | No (compared) |
+
+The **shipped model per endpoint was chosen on validation AUC, never on the test set**. Random Forest won all three. The GNN did not beat it on any endpoint.
+
+**How nearest-neighbour similarity is used twice.** kNN-Tanimoto is the baseline model above. The same Tanimoto machinery also powers the app's **applicability domain** check (step 6), but there it is not used to predict anything: it only measures how close the nearest training molecule is.
+
+### 5. Calibration
+
+Tree ensembles usually do not output well-calibrated probabilities. A **Platt calibrator** (a logistic regression on the model's logit) is fitted on the **validation set only**, so that "0.8" should mean roughly "80% of molecules scored like this really are positive". It improved Ames (Brier score 0.140 to 0.134), was neutral for BBB, and made hERG slightly worse, because only about 60 hERG molecules were available to fit it. **Treat hERG probabilities as rankings with rough meaning, not as exact risks.**
+
+### 6. Guardrails
+
+The verdict logic (`admet_core.verdict`) combines three safeguards:
+
+1. **Input validation**: refuse what the model was not built for (see [Rejected input](#rejected-input)).
+2. **Applicability domain**: if the nearest training molecule has Tanimoto similarity below **0.30**, answer `OUT OF DOMAIN`. In the notebook's subgroup analysis (ensemble model), ROC-AUC on the least similar third of the test set was 0.77 (hERG), 0.77 (Ames) and 0.85 (BBB), against 0.94 to 1.00 for the most similar third.
+3. **Uncertainty band**: calibrated probabilities between **0.40 and 0.60** give `UNCERTAIN` instead of a coin-flip verdict.
+
+Both thresholds were fixed in advance, not tuned on the test set.
+
+---
+
+## Results and limitations
+
+Held-out scaffold test set, deployed Random Forest:
+
+| Endpoint | Test molecules | ROC-AUC | Gain over logistic regression (95% CI) |
+|---|---|---|---|
+| hERG | 62 | 0.909 | +0.004 (−0.054 to +0.057): none detectable |
+| Ames | 726 | 0.886 | +0.031 (+0.013 to +0.050): real but modest |
+| BBB | 196 | 0.917 | +0.043 (−0.006 to +0.090): borderline |
+
+Read these honestly:
+
+- **Logistic regression on fingerprints is a strong baseline.** The Random Forest clearly beats it only for Ames, where there is the most data. With about 500 training molecules for hERG, extra model complexity buys nothing measurable.
+- **hERG results are fragile.** A 62-molecule test set gives wide intervals, and its probability calibration is only approximate.
+- **`LOW RISK` is not clearance.** In the Ames test set, 44 of the 223 molecules given a LOW RISK verdict (about 20%) were in fact mutagenic. At the plain 0.5 cut-off the model catches about 86% of hERG blockers, 81% of Ames mutagens and 98% of BBB-positives, so some true positives always slip through.
+- **It can be confidently wrong inside its domain**, for example on some polycyclic aromatics for Ames.
+- **Scope is narrow**: drug-like organic molecules from public datasets whose labels contain noise. It predicts from 2D structure alone: no 3D conformation, protonation state, metabolism or dose.
+
+The tables behind these numbers are in the repository: `benchmark_summary.csv`, `benchmark_ci.csv`, `benchmark_deployed_vs_baselines.csv`, `safety_metrics.csv`, `error_analysis_log.csv` (the worst false positives and negatives) and `library_screen.csv` (16 well-known drugs, with a flag for which ones the model had already seen in training).
+
+---
 
 ## Repository layout
 
 | File | Purpose |
 |---|---|
-| `TrackB_ADMET_Hackathon.ipynb` | The full analysis: data, split, models, benchmark, guardrails, error analysis, app |
-| `admet_core.py` | Shared standardisation, featurisation, input validation and verdict logic (used by notebook **and** app) |
-| `app.py` | Gradio app; downloads the model bundle on first start |
+| `README.md` | This page |
+| `app.py` | The Gradio app. Downloads the model file on first start |
+| `admet_core.py` | Shared cleaning, featurisation, input validation, similarity and verdict logic, used by both the notebook and the app |
 | `Launch_App.ipynb` | Colab launcher for the app |
-| `requirements.txt` | Pinned runtime dependencies for the app (also used by the Hugging Face Space) |
-| `requirements-train.txt` | Extra packages for re-running the notebook |
-| `*.csv` | Benchmark tables, safety metrics, edge-case tests, error log, drug screen (written by the notebook) |
+| `TrackB_ADMET_Hackathon.ipynb` | The full analysis: data, split, models, benchmark, guardrails, error analysis, and writing the app |
+| `requirements.txt` | Pinned packages needed to run the app |
+| `requirements-train.txt` | Extra packages needed to re-run the notebook |
+| `benchmark_*.csv`, `safety_metrics.csv`, `edge_case_tests.csv`, `error_analysis_log.csv`, `library_screen.csv` | Result tables written by the notebook |
+
+Not in the repository (listed in `.gitignore`): `admet_bundle.joblib` (the trained models; see below) and `data/` (the datasets and feature cache, which the notebook downloads and generates).
+
+---
 
 ## Reproduce the training
 
-1. `pip install -r requirements-train.txt`
-2. Run `TrackB_ADMET_Hackathon.ipynb` top to bottom (CPU is enough; about 25 to 30 minutes on a modern laptop, longer on free Colab). It downloads the three TDC datasets into `data/` (from a Hugging Face mirror of TDC), trains everything and writes `admet_bundle.joblib` and the CSVs. All random seeds are fixed, though tiny (2nd to 3rd decimal) run-to-run differences can occur from multi-threading.
-3. `python app.py`
+1. Install the full set of packages: `pip install -r requirements-train.txt`.
+2. Open `TrackB_ADMET_Hackathon.ipynb` and run it **top to bottom**. A CPU is enough: about 25 to 30 minutes on a modern laptop, longer on free Colab. In Colab, the first cell fetches this repository for you.
+3. The notebook downloads the three TDC datasets into `data/` (from a Hugging Face mirror of TDC), trains and benchmarks everything, and writes `admet_bundle.joblib` plus the result CSVs.
+4. `python app.py` now uses your freshly trained local `admet_bundle.joblib` and downloads nothing.
 
-## Method in one paragraph
+All random seeds are fixed, though tiny (2nd to 3rd decimal) run-to-run differences can occur from multi-threading. Your retrained bundle will not match the published SHA-256, which only applies to the downloaded v1.0 file.
 
-Datasets are cleaned (largest fragment, neutralisation, canonical SMILES, duplicate and label-conflict removal) and split by Bemis-Murcko scaffold 80/10/10 (randomised, class-balanced, with an assertion that no scaffold crosses partitions). Features are ECFP4 counts, MACCS keys and RDKit 2D descriptors; a GINE graph neural network is trained from scratch for comparison. Models are tuned by scaffold-grouped cross-validation on training data only; the deployed model, thresholds and Platt calibrator are chosen on validation data; the test set is only reported on. Baselines: majority class, Tanimoto kNN, logistic regression. Results use 3 seeds and bootstrap confidence intervals.
+---
+
+## Model file and hosting
+
+- **Why the models are not in git:** `admet_bundle.joblib` is about 87 MB, so it is attached to the [V1.0 release](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0) instead of the repository history. `app.py` downloads it on first start and checks its SHA-256 before loading.
+- **Security note:** the bundle is a Python pickle, and loading a pickle can execute code. Only load bundles you trained yourself or downloaded from this repository's releases. The hash check enforces the second case for the automatic download.
+- **Version note:** the bundle was trained with scikit-learn 1.8.0 and RDKit 2026.9.1, which `requirements.txt` pins. Other scikit-learn versions load it with an `InconsistentVersionWarning` and may behave differently. RDKit is pinned because the 217 descriptors come from its descriptor list, and a different RDKit version can change that list so the features no longer match what the model was trained on.
+- **Hugging Face Space (optional):** the settings block at the very top of this file (shown as a small table on GitHub) configures this repository to run as a Gradio Space, if you create one and push the repository to it. This has not been tested on Hugging Face itself.
+
+---
 
 ## Data and licences
 
-TDC datasets (hERG, AMES, BBB_Martins) via the public `scikit-fingerprints/TDC_*` mirror on Hugging Face; see the TDC site for original sources and terms: https://tdcommons.ai/
+The datasets are the TDC benchmark versions of hERG (Wang et al. 2016), Ames (Xu et al. 2012) and BBB_Martins (Martins et al. 2012), downloaded from the public `scikit-fingerprints/TDC_*` mirror on Hugging Face. They are **not** redistributed in this repository. See the TDC site for the original sources and terms: https://tdcommons.ai/
