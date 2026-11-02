@@ -114,7 +114,7 @@ You get a table (one row per input) and a gallery of the drawn structures.
 |---|---|
 | `status` | `ok`, or `rejected` with the reason in `notes` |
 | `hERG`, `AMES`, `BBB` | Verdict, plus `p=`, the **calibrated probability of label 1** (blocker / mutagenic / crosses the BBB) |
-| `hERG sim`, `AMES sim`, `BBB sim` | [Tanimoto similarity](https://doi.org/10.1186/s13321-015-0069-3) ([ECFP4](https://doi.org/10.1021/ci100050t)) to the **single most similar training molecule** for that endpoint. 1.0 means an identical structure is in the training data |
+| `hERG sim`, `AMES sim`, `BBB sim` | [Tanimoto similarity](https://doi.org/10.1186/s13321-015-0069-3) ([ECFP4](https://pubmed.ncbi.nlm.nih.gov/20426451/)) to the **single most similar training molecule** for that endpoint. 1.0 means an identical structure is in the training data |
 | `in training set of` | Endpoints whose training data already contain this exact molecule. Agreement there is memory, not prediction |
 | `notes` | Warnings such as salt stripped, unusual molecular weight, permanent charge |
 
@@ -166,7 +166,7 @@ Each SMILES is parsed with RDKit, reduced to its **largest fragment** (strips co
 
 ### 2. Scaffold split (the key evaluation decision)
 
-Medicinal chemists make series of close analogues, so a random split puts siblings in both train and test and the model scores well by remembering a twin (a well-documented problem: [Wallach & Heifets 2018](https://doi.org/10.1021/acs.jcim.7b00403)). To mimic the real job (scoring chemistry the model has not seen), molecules are grouped by **[Bemis-Murcko scaffold](https://doi.org/10.1021/jm9602928)** (the ring systems and linkers with side chains stripped) and **whole scaffold groups** go to train, validation or test in an 80/10/10 split. Code asserts that no scaffold appears in two partitions. Acyclic molecules share one empty-scaffold group, which stays together.
+Medicinal chemists make series of close analogues, so a random split puts siblings in both train and test and the model scores well by remembering a twin (a well-documented problem: [Wallach & Heifets 2018](https://arxiv.org/abs/1706.06619)). To mimic the real job (scoring chemistry the model has not seen), molecules are grouped by **[Bemis-Murcko scaffold](https://pubmed.ncbi.nlm.nih.gov/8709122/)** (the ring systems and linkers with side chains stripped) and **whole scaffold groups** go to train, validation or test in an 80/10/10 split. Code asserts that no scaffold appears in two partitions. Acyclic molecules share one empty-scaffold group, which stays together.
 
 A plain deterministic scaffold split (biggest groups to train, singletons to test) produced test sets with badly skewed class balance here, so the split is randomised and the best of 300 shuffles is kept for class balance. In the notebook's own comparison, a random split inflated the Ames ROC-AUC by about 0.06 (0.92 against 0.86). Note that the hERG numbers cannot be told apart between the two splits because its test set is so small.
 
@@ -174,8 +174,8 @@ A plain deterministic scaffold split (biggest groups to train, singletons to tes
 
 Each molecule becomes a vector of **2,432 numbers**:
 
-- **2,048 ECFP4 counts** ([Morgan / extended-connectivity fingerprint](https://doi.org/10.1021/ci100050t), radius 2): how many times each hashed circular substructure occurs. This is what lets the model see things like a basic amine, a nitroaromatic or a fused polycyclic.
-- **167 [MACCS keys](https://doi.org/10.1021/ci010132r)**: predefined substructure flags.
+- **2,048 ECFP4 counts** ([Morgan / extended-connectivity fingerprint](https://pubmed.ncbi.nlm.nih.gov/20426451/), radius 2): how many times each hashed circular substructure occurs. This is what lets the model see things like a basic amine, a nitroaromatic or a fused polycyclic.
+- **167 [MACCS keys](https://pubmed.ncbi.nlm.nih.gov/?term=Reoptimization+of+MDL+keys+for+use+in+drug+discovery)**: predefined substructure flags.
 - **217 [RDKit](https://www.rdkit.org/) 2D descriptors**: physicochemical quantities such as logP, TPSA, molecular weight, H-bond donors and acceptors, which are the quantities the BBB and hERG rules of thumb are written in.
 
 ### 4. Models: a ladder where each rung must earn its place
@@ -203,7 +203,7 @@ Tree ensembles usually do not output well-calibrated probabilities. A **[Platt c
 The verdict logic (`admet_core.verdict`) combines three safeguards:
 
 1. **Input validation**: refuse what the model was not built for (see [Rejected input](#rejected-input)).
-2. **Applicability domain**: if the nearest training molecule has Tanimoto similarity below **0.30**, answer `OUT OF DOMAIN` (the idea that prediction accuracy falls with distance from the training set is shown in [Sheridan et al. 2004](https://doi.org/10.1021/ci049782w)). In the notebook's subgroup analysis (ensemble model), ROC-AUC on the least similar third of the test set was 0.77 (hERG), 0.77 (Ames) and 0.85 (BBB), against 0.94 to 1.00 for the most similar third.
+2. **Applicability domain**: if the nearest training molecule has Tanimoto similarity below **0.30**, answer `OUT OF DOMAIN` (the idea that prediction accuracy falls with distance from the training set is shown in [Sheridan et al. 2004](https://pubmed.ncbi.nlm.nih.gov/?term=Similarity+to+molecules+in+the+training+set+is+a+good+discriminator+for+prediction+accuracy+in+QSAR)). In the notebook's subgroup analysis (ensemble model), ROC-AUC on the least similar third of the test set was 0.77 (hERG), 0.77 (Ames) and 0.85 (BBB), against 0.94 to 1.00 for the most similar third.
 3. **Uncertainty band**: calibrated probabilities between **0.40 and 0.60** give `UNCERTAIN` instead of a coin-flip verdict.
 
 Both thresholds were fixed in advance, not tuned on the test set.
@@ -279,9 +279,9 @@ Everything reported above can be traced to one of these.
 
 | Endpoint | Original publication | TDC page | File the notebook downloads | Rows before cleaning | Positive rate |
 |---|---|---|---|---|---|
-| hERG | [Wang et al. 2016](https://doi.org/10.1021/acs.molpharmaceut.6b00471) | [TDC toxicity tasks](https://tdcommons.ai/single_pred_tasks/tox/) | [`tdc_herg.csv`](https://huggingface.co/datasets/scikit-fingerprints/TDC_herg/resolve/main/tdc_herg.csv) | 655 | 68.9% |
-| AMES | [Xu et al. 2012](https://doi.org/10.1021/ci300400a) | [TDC toxicity tasks](https://tdcommons.ai/single_pred_tasks/tox/) | [`tdc_ames.csv`](https://huggingface.co/datasets/scikit-fingerprints/TDC_ames/resolve/main/tdc_ames.csv) | 7,278 | 54.6% |
-| BBB | [Martins et al. 2012](https://doi.org/10.1021/ci300124c) | [TDC ADME tasks](https://tdcommons.ai/single_pred_tasks/adme/) | [`tdc_bbb_martins.csv`](https://huggingface.co/datasets/scikit-fingerprints/TDC_bbb_martins/resolve/main/tdc_bbb_martins.csv) | 2,030 | 76.4% |
+| hERG | [Wang et al. 2016](https://pubmed.ncbi.nlm.nih.gov/?term=ADMET+evaluation+in+drug+discovery+16+Predicting+hERG+blockers+by+combining+multiple+pharmacophores+and+machine+learning+approaches) | [TDC toxicity tasks](https://tdcommons.ai/single_pred_tasks/tox/) | [`tdc_herg.csv`](https://huggingface.co/datasets/scikit-fingerprints/TDC_herg/resolve/main/tdc_herg.csv) | 655 | 68.9% |
+| AMES | [Xu et al. 2012](https://pubmed.ncbi.nlm.nih.gov/23030379/) | [TDC toxicity tasks](https://tdcommons.ai/single_pred_tasks/tox/) | [`tdc_ames.csv`](https://huggingface.co/datasets/scikit-fingerprints/TDC_ames/resolve/main/tdc_ames.csv) | 7,278 | 54.6% |
+| BBB | [Martins et al. 2012](https://pubmed.ncbi.nlm.nih.gov/?term=A+Bayesian+approach+to+in+silico+blood-brain+barrier+penetration+modeling) | [TDC ADME tasks](https://tdcommons.ai/single_pred_tasks/adme/) | [`tdc_bbb_martins.csv`](https://huggingface.co/datasets/scikit-fingerprints/TDC_bbb_martins/resolve/main/tdc_bbb_martins.csv) | 2,030 | 76.4% |
 
 The files are copies of the TDC tables on a public Hugging Face mirror (`scikit-fingerprints/TDC_*`), used because TDC's own download server is sometimes unreachable. The mirror holds a few more rows than the official TDC counts (for example 655 against 648 for hERG); cleaning removes duplicates and conflicting labels, leaving 607, 7,255 and 1,955 molecules. The row counts and positive rates in the table are what the notebook prints when it loads the files, so you can check your download against them. The exact download code is the cell that defines `SOURCES` in section 1.1 of the notebook.
 
@@ -289,7 +289,7 @@ The files are copies of the TDC tables on a public Hugging Face mirror (`scikit-
 
 **Every number in Results**: the CSV tables in this repository (`benchmark_summary.csv`, `benchmark_ci.csv`, `benchmark_deployed_vs_baselines.csv`, `benchmark_all_seeds.csv`, `safety_metrics.csv`, `edge_case_tests.csv`, `error_analysis_log.csv`, `library_screen.csv`), written by `TrackB_ADMET_Hackathon.ipynb`.
 
-**Methods references**: [Tanimoto similarity](https://doi.org/10.1186/s13321-015-0069-3) · [ECFP fingerprints](https://doi.org/10.1021/ci100050t) · [MACCS keys](https://doi.org/10.1021/ci010132r) · [Bemis-Murcko scaffolds](https://doi.org/10.1021/jm9602928) · [why random splits flatter models](https://doi.org/10.1021/acs.jcim.7b00403) · [Random Forest](https://doi.org/10.1023/A:1010933404324) · [LightGBM](https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree) · [GINE graph network](https://arxiv.org/abs/1905.12265) · [probability calibration](https://doi.org/10.1145/1102351.1102430) · [similarity and accuracy in QSAR](https://doi.org/10.1021/ci049782w) · [SHAP](https://arxiv.org/abs/1705.07874) · [RDKit](https://www.rdkit.org/) · [Gradio](https://www.gradio.app/) · [TDC](https://arxiv.org/abs/2102.09548)
+**Methods references**: [Tanimoto similarity](https://doi.org/10.1186/s13321-015-0069-3) · [ECFP fingerprints](https://pubmed.ncbi.nlm.nih.gov/20426451/) · [MACCS keys](https://pubmed.ncbi.nlm.nih.gov/?term=Reoptimization+of+MDL+keys+for+use+in+drug+discovery) · [Bemis-Murcko scaffolds](https://pubmed.ncbi.nlm.nih.gov/8709122/) · [why random splits flatter models](https://arxiv.org/abs/1706.06619) · [Random Forest](https://doi.org/10.1023/A:1010933404324) · [LightGBM](https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree) · [GINE graph network](https://arxiv.org/abs/1905.12265) · [probability calibration](https://doi.org/10.1145/1102351.1102430) · [similarity and accuracy in QSAR](https://pubmed.ncbi.nlm.nih.gov/?term=Similarity+to+molecules+in+the+training+set+is+a+good+discriminator+for+prediction+accuracy+in+QSAR) · [SHAP](https://arxiv.org/abs/1705.07874) · [RDKit](https://www.rdkit.org/) · [Gradio](https://www.gradio.app/) · [TDC](https://arxiv.org/abs/2102.09548)
 
 ---
 
