@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd(
 BUNDLE_PATH = HERE / "admet_bundle.joblib"
 BUNDLE_URL = os.environ.get(
     "ADMET_BUNDLE_URL",
-    "https://github.com/lai-wohjon/admet-triage-panel/releases/download/v1.0/admet_bundle.joblib")
+    "https://github.com/lai-wohjon/admet-triage-panel/releases/download/V1.0/admet_bundle.joblib")
 BUNDLE_SHA256 = "e8de89babea4798ab4361593fc5d14df860873081f091e0dbe1bd4c720552818"  # of the v1.0 release file
 
 

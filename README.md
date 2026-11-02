@@ -40,7 +40,7 @@ pip install -r requirements.txt
 python app.py        # open the printed local URL, paste one SMILES per line
 ```
 
-The trained models (`admet_bundle.joblib`, ~87 MB) are **not stored in git**. On first start `app.py` downloads them from the [v1.0 release](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/v1.0) and checks the file's SHA-256 before loading it. If you train your own bundle (below), the local file is used and nothing is downloaded.
+The trained models (`admet_bundle.joblib`, ~87 MB) are **not stored in git**. On first start `app.py` downloads them from the [V1.0 release](https://github.com/lai-wohjon/admet-triage-panel/releases/tag/V1.0) and checks the file's SHA-256 before loading it. If you train your own bundle (below), the local file is used and nothing is downloaded.
 
 > **Security note.** The bundle is a Python pickle, and loading a pickle can execute code. Only load bundles you trained yourself or downloaded from this repository's releases (the hash check enforces the latter).
 
