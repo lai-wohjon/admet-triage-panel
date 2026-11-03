@@ -214,6 +214,14 @@ The verdict logic (`admet_core.verdict`) combines three safeguards:
 
 Both thresholds were fixed in advance, not tuned on the test set.
 
+
+> **More interpretability and calibration detail is in the notebook.** This README gives the short version. [`TrackB_ADMET_Hackathon.ipynb`](TrackB_ADMET_Hackathon.ipynb) has the full analysis, with the plots and code:
+> - **Model interpretability:** section 6.2, SHAP importance bars and beeswarm plots for hERG and BBB, with a check of whether the model rediscovers known chemistry.
+> - **Calibration:** section 7, reliability curves on the test set before and after Platt scaling, with Brier scores.
+> - **Knowing what it doesn't know:** section 8, the accuracy-versus-coverage trade-off, what `LOW RISK` really means (sensitivity, negative predictive value and a safety-tuned threshold).
+> - **Robustness:** section 9 (edge-case stress tests and subgroup/bias checks) and section 10 (the worst false positives and negatives).
+> - **Uncertainty on the benchmark:** section 5.1, bootstrap confidence intervals and paired differences.
+
 ---
 
 ## Results and limitations
