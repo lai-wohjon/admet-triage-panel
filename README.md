@@ -18,16 +18,26 @@ Note: Some of the code and the organization of some of these information is done
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lai-wohjon/admet-triage-panel/blob/main/Launch_App.ipynb)
 
 > **New here? (judges, reviewers, general public)** This is a hackathon project (Track B, Cheminformatics and Early Drug Discovery) built by AUA Group 3 for the AUA Joint Lecture Series, Faculty of Pharmacy UI 2026, organised by the Faculty of Pharmacy, Universitas Indonesia. It predicts, from a molecule's structure alone, three early drug-safety risks, and it is designed to say "I don't know" rather than guess.
-> - **Try it in two clicks, no install:** the Colab badge above. Details in [Quick start](#quick-start).
-> - **Read how it was built and tested:** [How it works](#how-it-works) and [Results and limitations](#results-and-limitations).
+> - **1. Run the app (no install):** [`Launch_App.ipynb`](Launch_App.ipynb), or click the Colab badge above. Details in [Quick start](#quick-start).
+> - **2. See everything behind the model:** [`TrackB_ADMET_Hackathon.ipynb`](TrackB_ADMET_Hackathon.ipynb) holds the data, scaffold split, model training and comparison, SHAP interpretability, calibration, guardrails and error analysis.
+> - **3. Read the summary:** [How it works](#how-it-works) and [Results and limitations](#results-and-limitations).
 > - **Check the evidence:** [Sources of truth](#sources-of-truth) lists the raw data, the model file with its checksum, and the result tables.
 > - **If you are keen to find out more, please contact [laiwohjon@gmail.com](mailto:laiwohjon@gmail.com).**
+
+## Team (AUA Group 3)
+
+| Name | Affiliation |
+|---|---|
+| Najla Desvaa Yardi | Universitas Indonesia |
+| Nayun Kim | Seoul National University |
+| Mitayani Wahyu Murti | Universitas Indonesia |
+| Lai Woh Jon | National University of Singapore |
 
 A small web app that takes molecules as SMILES strings and flags three ADMET liabilities that commonly kill drug candidates late: **hERG channel block** (cardiac risk), **Ames mutagenicity** (genotoxicity) and **blood-brain-barrier (BBB) penetration** (CNS exposure). Every answer comes with a calibrated probability and a traffic-light verdict, and the app says **"I don't know"** for molecules that look unlike the data it learned from.
 
 > **Research prototype. `LOW RISK` means "no alarm was raised", not "safe". Not for clinical decisions.** It is a triage tool for ranking and prioritising compounds, not a replacement for the assay.
 
-**Contents:** [What it predicts](#what-it-predicts) · [Quick start](#quick-start) · [Using the app](#using-the-app) · [How it works](#how-it-works) · [Results and limitations](#results-and-limitations) · [Repository layout](#repository-layout) · [Reproduce the training](#reproduce-the-training) · [Model file and hosting](#model-file-and-hosting) · [Sources of truth](#sources-of-truth) · [Data and licences](#data-and-licences)
+**Contents:** [Team](#team-aua-group-3) · [What it predicts](#what-it-predicts) · [Quick start](#quick-start) · [Using the app](#using-the-app) · [How it works](#how-it-works) · [Results and limitations](#results-and-limitations) · [Repository layout](#repository-layout) · [Reproduce the training](#reproduce-the-training) · [Model file and hosting](#model-file-and-hosting) · [Sources of truth](#sources-of-truth) · [Data and licences](#data-and-licences)
 
 ---
 
@@ -250,11 +260,11 @@ The tables behind these numbers are in the repository: `benchmark_summary.csv`, 
 
 | File | Purpose |
 |---|---|
+| **[`Launch_App.ipynb`](Launch_App.ipynb)** | **Start here to run the app.** Colab launcher: run two cells, no install |
+| **[`TrackB_ADMET_Hackathon.ipynb`](TrackB_ADMET_Hackathon.ipynb)** | **Start here to see how the model was built.** The full analysis: data, split, model training and benchmark, SHAP interpretability, calibration, guardrails, error analysis, and writing the app |
 | `README.md` | This page |
 | `app.py` | The Gradio app. Downloads the model file on first start |
 | `admet_core.py` | Shared cleaning, featurisation, input validation, similarity and verdict logic, used by both the notebook and the app |
-| `Launch_App.ipynb` | Colab launcher for the app |
-| `TrackB_ADMET_Hackathon.ipynb` | The full analysis: data, split, models, benchmark, guardrails, error analysis, and writing the app |
 | `requirements.txt` | Pinned packages needed to run the app |
 | `requirements-train.txt` | Extra packages needed to re-run the notebook |
 | `benchmark_*.csv`, `safety_metrics.csv`, `edge_case_tests.csv`, `error_analysis_log.csv`, `library_screen.csv` | Result tables written by the notebook |
